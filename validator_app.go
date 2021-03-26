@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/cosmos/ledger-go"
+	"github.com/troian/ledger-go"
 )
 
 const (
@@ -36,21 +36,29 @@ const (
 // Validator app
 type LedgerTendermintValidator struct {
 	// Add support for this app
-	api *ledger_go.Ledger
+	api ledger_go.LedgerDevice
 }
 
 // RequiredCosmosUserAppVersion indicates the minimum required version of the Tendermint app
 func RequiredTendermintValidatorAppVersion() VersionInfo {
-	return VersionInfo{0, 0, 5, 0,}
+	return VersionInfo{0, 0, 5, 0}
 }
 
 // FindLedgerCosmosValidatorApp finds a Cosmos validator app running in a ledger device
 func FindLedgerTendermintValidatorApp() (*LedgerTendermintValidator, error) {
-	ledgerAPI, err := ledger_go.FindLedger()
+	admin := ledger_go.NewLedgerAdmin()
+	admin.CountDevices()
+	ledgerAPI, err := admin.Connect(0)
 
 	if err != nil {
 		return nil, err
 	}
+
+	defer func() {
+		if err != nil {
+			_ = ledgerAPI.Close()
+		}
+	}()
 
 	ledgerCosmosValidatorApp := LedgerTendermintValidator{ledgerAPI}
 
@@ -60,13 +68,12 @@ func FindLedgerTendermintValidatorApp() (*LedgerTendermintValidator, error) {
 		if err.Error() == "[APDU_CODE_CLA_NOT_SUPPORTED] Class not supported" {
 			return nil, fmt.Errorf("are you sure the Tendermint Validator app is open?")
 		}
-		defer ledgerAPI.Close()
 		return nil, err
 	}
 
 	req := RequiredTendermintValidatorAppVersion()
 	err = CheckVersion(*appVersion, req)
-	if err !=nil {
+	if err != nil {
 		return nil, err
 	}
 

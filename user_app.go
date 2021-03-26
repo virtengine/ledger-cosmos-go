@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/cosmos/ledger-go"
+	"github.com/troian/ledger-go"
 )
 
 const (
@@ -35,23 +35,30 @@ const (
 
 // LedgerCosmos represents a connection to the Cosmos app in a Ledger Nano S device
 type LedgerCosmos struct {
-	api     *ledger_go.Ledger
+	api     ledger_go.LedgerDevice
 	version VersionInfo
 }
 
 // FindLedgerCosmosUserApp finds a Cosmos user app running in a ledger device
 func FindLedgerCosmosUserApp() (*LedgerCosmos, error) {
-	ledgerAPI, err := ledger_go.FindLedger()
+	admin := ledger_go.NewLedgerAdmin()
+	admin.CountDevices()
+	ledgerAPI, err := admin.Connect(0)
 
 	if err != nil {
 		return nil, err
 	}
 
+	defer func() {
+		if err != nil {
+			_ = ledgerAPI.Close()
+		}
+	}()
+
 	app := LedgerCosmos{ledgerAPI, VersionInfo{}}
 	appVersion, err := app.GetVersion()
 
 	if err != nil {
-		defer ledgerAPI.Close()
 		if err.Error() == "[APDU_CODE_CLA_NOT_SUPPORTED] Class not supported" {
 			return nil, fmt.Errorf("are you sure the Cosmos app is open?")
 		}
@@ -60,7 +67,6 @@ func FindLedgerCosmosUserApp() (*LedgerCosmos, error) {
 
 	err = app.CheckVersion(*appVersion)
 	if err != nil {
-		defer ledgerAPI.Close()
 		return nil, err
 	}
 
