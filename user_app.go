@@ -17,10 +17,11 @@
 package ledger_cosmos_go
 
 import (
+	"errors"
 	"fmt"
 	"math"
 
-	"github.com/cosmos/ledger-go"
+	"github.com/zondax/ledger-go"
 )
 
 const (
@@ -33,25 +34,40 @@ const (
 	userMessageChunkSize = 250
 )
 
+var (
+	errNotSupportedAppVersion = errors.New("app version not supported")
+	errNotFoundLedgerDevice = errors.New("couldn't find ledger device")
+)
+
 // LedgerCosmos represents a connection to the Cosmos app in a Ledger Nano S device
 type LedgerCosmos struct {
-	api     *ledger_go.Ledger
+	api     ledger_go.LedgerDevice
 	version VersionInfo
 }
 
 // FindLedgerCosmosUserApp finds a Cosmos user app running in a ledger device
 func FindLedgerCosmosUserApp() (*LedgerCosmos, error) {
-	ledgerAPI, err := ledger_go.FindLedger()
+	admin := ledger_go.NewLedgerAdmin()
+	if admin.CountDevices() == 0 {
+		return nil, errNotFoundLedgerDevice
+	}
+
+	ledgerAPI, err := admin.Connect(0)
 
 	if err != nil {
 		return nil, err
 	}
 
+	defer func() {
+		if err != nil {
+			_ = ledgerAPI.Close()
+		}
+	}()
+
 	app := LedgerCosmos{ledgerAPI, VersionInfo{}}
 	appVersion, err := app.GetVersion()
 
 	if err != nil {
-		defer ledgerAPI.Close()
 		if err.Error() == "[APDU_CODE_CLA_NOT_SUPPORTED] Class not supported" {
 			return nil, fmt.Errorf("are you sure the Cosmos app is open?")
 		}
@@ -60,7 +76,6 @@ func FindLedgerCosmosUserApp() (*LedgerCosmos, error) {
 
 	err = app.CheckVersion(*appVersion)
 	if err != nil {
-		defer ledgerAPI.Close()
 		return nil, err
 	}
 
@@ -85,7 +100,7 @@ func (ledger *LedgerCosmos) CheckVersion(ver VersionInfo) error {
 	case 2:
 		return CheckVersion(ver, VersionInfo{0, 2, 1, 0})
 	default:
-		return fmt.Errorf("App version is not supported")
+		return errNotSupportedAppVersion
 	}
 }
 
@@ -121,7 +136,7 @@ func (ledger *LedgerCosmos) SignSECP256K1(bip32Path []uint32, transaction []byte
 	case 2:
 		return ledger.signv2(bip32Path, transaction)
 	default:
-		return nil, fmt.Errorf("App version is not supported")
+		return nil, errNotSupportedAppVersion
 	}
 }
 
@@ -143,7 +158,7 @@ func (ledger *LedgerCosmos) GetAddressPubKeySECP256K1(bip32Path []uint32, hrp st
 	return ledger.getAddressPubKeySECP256K1(bip32Path, hrp, true)
 }
 
-func (ledger *LedgerCosmos) GetBip32bytes(bip32Path []uint32, hardenCount int) ([]byte, error) {
+func (ledger *LedgerCosmos) GetBip32bytes(bip32Path []uint32, _ int) ([]byte, error) {
 	var pathBytes []byte
 	var err error
 
@@ -159,7 +174,7 @@ func (ledger *LedgerCosmos) GetBip32bytes(bip32Path []uint32, hardenCount int) (
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("App version is not supported")
+		return nil, errNotSupportedAppVersion
 	}
 
 	return pathBytes, nil
@@ -197,11 +212,11 @@ func (ledger *LedgerCosmos) signv1(bip32Path []uint32, transaction []byte) ([]by
 				errorMsg := string(response)
 				switch errorMsg {
 				case "ERROR: JSMN_ERROR_NOMEM":
-					return nil, fmt.Errorf("Not enough tokens were provided")
+					return nil, fmt.Errorf("not enough tokens were provided")
 				case "PARSER ERROR: JSMN_ERROR_INVAL":
-					return nil, fmt.Errorf("Unexpected character in JSON string")
+					return nil, fmt.Errorf("unexpected character in JSON string")
 				case "PARSER ERROR: JSMN_ERROR_PART":
-					return nil, fmt.Errorf("The JSON string is not a complete.")
+					return nil, fmt.Errorf("the JSON string is not a complete")
 				}
 				return nil, fmt.Errorf(errorMsg)
 			}
@@ -256,11 +271,11 @@ func (ledger *LedgerCosmos) signv2(bip32Path []uint32, transaction []byte) ([]by
 				errorMsg := string(response)
 				switch errorMsg {
 				case "ERROR: JSMN_ERROR_NOMEM":
-					return nil, fmt.Errorf("Not enough tokens were provided")
+					return nil, fmt.Errorf("not enough tokens were provided")
 				case "PARSER ERROR: JSMN_ERROR_INVAL":
-					return nil, fmt.Errorf("Unexpected character in JSON string")
+					return nil, fmt.Errorf("unexpected character in JSON string")
 				case "PARSER ERROR: JSMN_ERROR_PART":
-					return nil, fmt.Errorf("The JSON string is not a complete.")
+					return nil, fmt.Errorf("the JSON string is not a complete")
 				}
 				return nil, fmt.Errorf(errorMsg)
 			}
@@ -318,11 +333,11 @@ func (ledger *LedgerCosmos) getAddressPubKeySECP256K1(bip32Path []uint32, hrp st
 		return nil, "", err
 	}
 	if len(response) < 35+len(hrp) {
-		return nil, "", fmt.Errorf("Invalid response")
+		return nil, "", fmt.Errorf("invalid response")
 	}
 
 	pubkey = response[0:33]
-	addr = string(response[33:len(response)])
+	addr = string(response[33:])
 
 	return pubkey, addr, err
 }

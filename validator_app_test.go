@@ -17,19 +17,20 @@
 package ledger_cosmos_go
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func Test_ValGetVersion(t *testing.T) {
 	validatorApp, err := FindLedgerTendermintValidatorApp()
 	if err != nil {
-		t.Fatalf( err.Error())
+		t.Fatalf(err.Error())
 	}
-	defer validatorApp.Close()
-
-	validatorApp.api.Logging = true
+	defer func() {
+		validatorApp.Close()
+	}()
 
 	version, err := validatorApp.GetVersion()
 	require.Nil(t, err, "Detected error")
@@ -42,11 +43,11 @@ func Test_ValGetVersion(t *testing.T) {
 func Test_ValGetPublicKey(t *testing.T) {
 	validatorApp, err := FindLedgerTendermintValidatorApp()
 	if err != nil {
-		t.Fatalf( err.Error())
+		t.Fatalf(err.Error())
 	}
-	defer validatorApp.Close()
-
-	validatorApp.api.Logging = true
+	defer func() {
+		_ = validatorApp.Close()
+	}()
 
 	path := []uint32{44, 118, 0, 0, 0}
 
