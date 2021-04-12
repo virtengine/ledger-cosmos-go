@@ -8,4 +8,4 @@ require (
 	github.com/zondax/ledger-go v0.12.1
 )
 
-replace github.com/zondax/ledger-go => github.com/ovrclk/ledger-go v0.13.2
+replace github.com/zondax/ledger-go => github.com/ovrclk/ledger-go v0.13.4
