@@ -20,11 +20,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"strings"
+	"testing"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"strings"
-	"testing"
 )
 
 // Ledger Test Mnemonic: equip will roof matter pink blind book anxiety banner elbow sun young
@@ -36,7 +37,9 @@ func Test_UserFindLedger(t *testing.T) {
 	}
 
 	assert.NotNil(t, userApp)
-	defer userApp.Close()
+	defer func() {
+		_ = userApp.Close()
+	}()
 }
 
 func Test_UserGetVersion(t *testing.T) {
@@ -44,9 +47,9 @@ func Test_UserGetVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	defer userApp.Close()
-
-	userApp.api.Logging = true
+	defer func() {
+		_ = userApp.Close()
+	}()
 
 	version, err := userApp.GetVersion()
 	require.Nil(t, err, "Detected error")
@@ -63,9 +66,9 @@ func Test_UserGetPublicKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	defer userApp.Close()
-
-	userApp.api.Logging = true
+	defer func() {
+		_ = userApp.Close()
+	}()
 
 	path := []uint32{44, 118, 5, 0, 21}
 
@@ -89,9 +92,9 @@ func Test_GetAddressPubKeySECP256K1_Zero(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	defer userApp.Close()
-
-	userApp.api.Logging = true
+	defer func() {
+		_ = userApp.Close()
+	}()
 
 	hrp := "cosmos"
 	path := []uint32{44, 118, 0, 0, 0}
@@ -115,9 +118,9 @@ func Test_GetAddressPubKeySECP256K1(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	defer userApp.Close()
-
-	userApp.api.Logging = true
+	defer func() {
+		_ = userApp.Close()
+	}()
 
 	hrp := "cosmos"
 	path := []uint32{44, 118, 5, 0, 21}
@@ -141,9 +144,9 @@ func Test_UserPK_HDPaths(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	defer userApp.Close()
-
-	userApp.api.Logging = true
+	defer func() {
+		_ = userApp.Close()
+	}()
 
 	path := []uint32{44, 118, 0, 0, 0}
 
@@ -210,9 +213,9 @@ func Test_UserSign(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	defer userApp.Close()
-
-	userApp.api.Logging = true
+	defer func() {
+		_ = userApp.Close()
+	}()
 
 	path := []uint32{44, 118, 0, 0, 5}
 
@@ -258,9 +261,9 @@ func Test_UserSign_Fails(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	defer userApp.Close()
-
-	userApp.api.Logging = true
+	defer func() {
+		_ = userApp.Close()
+	}()
 
 	path := []uint32{44, 118, 0, 0, 5}
 
@@ -273,6 +276,6 @@ func Test_UserSign_Fails(t *testing.T) {
 	errMessage := err.Error()
 
 	if errMessage != "Invalid character in JSON string" && errMessage != "Unexpected characters" {
-		assert.Fail(t, "Unexpected error message returned: " + errMessage )
+		assert.Fail(t, "Unexpected error message returned: "+errMessage)
 	}
 }

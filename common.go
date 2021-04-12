@@ -53,20 +53,20 @@ func NewVersionRequiredError(req VersionInfo, ver VersionInfo) error {
 // CheckVersion compares the current version with the required version
 func CheckVersion(ver VersionInfo, req VersionInfo) error {
 	if ver.Major != req.Major {
-		if (ver.Major > req.Major){
+		if ver.Major > req.Major {
 			return nil
 		}
 		return NewVersionRequiredError(req, ver)
 	}
 
 	if ver.Minor != req.Minor {
-		if (ver.Minor > req.Minor) {
+		if ver.Minor > req.Minor {
 			return nil
 		}
 		return NewVersionRequiredError(req, ver)
 	}
 
-	if (ver.Patch >= req.Patch){
+	if ver.Patch >= req.Patch {
 		return nil
 	}
 	return NewVersionRequiredError(req, ver)
